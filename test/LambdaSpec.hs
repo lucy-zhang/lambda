@@ -23,9 +23,17 @@ spec = do
             , ("(\\x.\\y.x y1)y", "\\y2.y y1")
             , ("(\\x.\\y.x y1)(y y2)", "\\y3.(y y2) y1")
             , ("(\\x.\\y.x y1)(y y3)", "\\y2.(y y3) y1")
+            , ("(\\y.\\x.\\x.y)x", "\\x1.\\x1.x")
             , ("(\\n.\\f.\\x.f (n f x))(\\f.\\x.x)", "\\f.\\x.f x")
             , ("(\\n.\\f.\\x.f (n f x))(\\f.\\x.f x)", "\\f.\\x.f (f x)")
             , ("(\\p.\\q.p q p)(\\a.\\b.a)(\\a.\\b.b)", "\\a.\\b.b")
+            , ("(\\p.p (\\a.\\b.b) (\\a.\\b.a))(\\a.\\b.b)", "\\a.\\b.a")
+            , ("(\\x.y)((\\x.xx)(\\x.xx))", "y")
+            ]
+
+        mapM_ (uncurry evalErrorSpec) [
+              ("(\\x.xx)(\\x.xx)", NoNormalForm)
+            , ("(\\x.xxx)(\\x.xxx)", MaxRecursionDepthExceeded)
             ]
 
 unwrap :: Show error => Either error a -> a
@@ -37,3 +45,8 @@ evalSpec ex result = it ("reduces " ++ ex ++ " to " ++ result) $ do
     let e = unwrap (eval recursionDepth =<< parseExpr ex)
         expected = unwrap (parseExpr result)
     e `shouldBe` expected
+
+evalErrorSpec :: String -> NonTerminatingEval -> Spec
+evalErrorSpec ex err = it ("fails to reduce " ++ ex ++ " with error " ++ show err) $ do
+    let e = eval recursionDepth =<< parseExpr ex
+    e `shouldBe` Left (LambdaEvalError err)
